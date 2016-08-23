@@ -1,0 +1,319 @@
+
+select 
+tk,
+'I'+[Item No_]+'I' as [Item No_],
+AmountStock,
+QuantityStock,
+AmountLY,
+QuantityLY ,
+AmountNewLM,
+QuantityNewLM,
+AmountLM,
+QuantityLM,
+ap,
+pr,
+case 
+when ap >= 6 or AmountNewLM <> 0 then 0
+when ap >= 2 and ap < 6 then pr * 0.035
+when ap >= 1 and ap < 2 then pr * 0.15
+when ap >= 0.5 and ap < 1 then pr * 0.5
+when ap >= 0.33 and ap < 0.5 then pr * 0.85
+when  ap < 0.33 then pr 
+end as Provision,
+case 
+when ap >= 6 or AmountNewLM <> 0 then '>=6'
+when ap >= 2 and ap < 6 then '=>2 ir <6'
+when ap >= 1 and ap < 2 then '=>1 ir <2'
+when ap >= 0.5 and ap < 1 then '=>0.5 ir <1'
+when ap >= 0.33 and ap < 0.5 then '=>0.33 ir <0.5'
+when  ap < 0.33 then '<0.33' 
+end as ProvisionLevel,
+case 
+when ap >= 6 or AmountNewLM <> 0 then 6
+when ap >= 2 and ap < 6 then 5
+when ap >= 1 and ap < 2 then 4
+when ap >= 0.5 and ap < 1 then 3
+when ap >= 0.33 and ap < 0.5 then 2
+when  ap < 0.33 then 1 
+end as ProvisionLevelInt
+from (
+select 
+tk,
+[Item No_],
+sum(AmountStock) AmountStock,
+sum(QuantityStock) QuantityStock,
+sum(AmountLY) AmountLY,
+sum(QuantityLY ) QuantityLY,
+sum(AmountNewLM)AmountNewLM,
+sum(QuantityNewLM)QuantityNewLM,
+sum(AmountLM)AmountLM,
+sum(QuantityLM)QuantityLM,
+case when sum(AmountStock) <> 0 then sum(AmountLY) / SUM(AmountStock) else 0 end as ap,
+case when (sum(AmountStock) - sum(AmountLM) - sum(AmountNewLM)) >0 then (sum(AmountStock) - sum(AmountLM) - sum(AmountNewLM)) else 0 end as pr
+
+from (
+
+-- likutis dienai
+
+SELECT 
+tk,
+ve.[Posting Date],
+ve.[Item No_],
+[Global Dimension 1 Code] as gd1,
+[Global Dimension 2 Code] as gd2,
+case when tk < ve.[Posting Date] then 0 else  [Cost Posted to G_L] end  AmountStock,
+case when tk < ve.[Posting Date] then 0 else  [Invoiced Quantity] end QuantityStock,
+0 AmountLY,
+0 QuantityLY,
+0 AmountNewLM,
+0 QuantityNewLM,
+0 AmountLM,
+0 QuantityLM
+FROM "<Company Name>$Value Entry" ve with (nolock)
+cross apply 
+(
+select GETDATE() as tk 
+--ateitis
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())+1,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())+2,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())+3,0))
+--metai atgal
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())+0,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-1,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-2,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-3,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-4,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-5,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-6,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-7,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-8,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-9,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-10,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-11,0)))a
+
+where   
+(
+case when tk < ve.[Posting Date] then 0 else  [Cost Posted to G_L] end <> 0 or
+case when tk < ve.[Posting Date] then 0 else  [Invoiced Quantity] end <> 0
+)
+union all
+--parduota per metus atgal
+
+SELECT 
+tk,
+ve.[Posting Date],
+ve.[Item No_],
+[Global Dimension 1 Code] as gd1,
+[Global Dimension 2 Code] as gd2,
+0,
+0,
+case when datediff(day,dateadd(year,-1,tk) , ve.[Posting Date]) not between 0 and DATEDIFF(day,dateadd(year,-1,tk),tk)  then 0 else  [Cost Posted to G_L] *-1 end  AmountLY,
+case when datediff(day,dateadd(year,-1,tk) , ve.[Posting Date]) not between 0 and DATEDIFF(day,dateadd(year,-1,tk),tk)  then 0 else  [Invoiced Quantity] *-1 end QuantityLY,
+0,
+0,
+0,
+0
+FROM "<Company Name>$Value Entry" ve with (nolock)
+cross apply 
+(
+select GETDATE() as tk 
+--ateitis
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())+1,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())+2,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())+3,0))
+--metai atgal
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())+0,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-1,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-2,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-3,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-4,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-5,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-6,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-7,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-8,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-9,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-10,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-11,0)))a
+
+where [Item Ledger Entry Type] = 1  
+and 
+(
+case when datediff(day,dateadd(year,-1,tk) , ve.[Posting Date]) not between 0 and DATEDIFF(day,dateadd(year,-1,tk),tk) then 0 else  [Cost Posted to G_L] end <> 0 or
+case when datediff(day,dateadd(year,-1,tk) , ve.[Posting Date]) not between 0 and DATEDIFF(day,dateadd(year,-1,tk),tk)  then 0 else  [Invoiced Quantity] end <> 0
+)
+union all
+--pirkta naujos prekes per 6 men
+
+SELECT 
+tk,
+ve.[Posting Date],
+ve.[Item No_],
+[Global Dimension 1 Code] as gd1,
+[Global Dimension 2 Code] as gd2,
+--b.mpd,
+0,
+0,
+0,
+0,
+case   when datediff(day,dateadd(month,-6,tk) , ve.[Posting Date]) not between 0 and DATEDIFF(day,dateadd(month,-6,tk),tk)  or DATEDIFF(day,mpd,tk) > 183 then 0 else  [Cost Posted to G_L] end  AmountNewLM,
+case   when datediff(day,dateadd(month,-6,tk) , ve.[Posting Date]) not between 0 and DATEDIFF(day,dateadd(month,-6,tk),tk) or DATEDIFF(day,mpd,tk) > 183 then 0 else  [Invoiced Quantity] end QuantityNewLM,
+0,
+0
+FROM "<Company Name>$Value Entry" ve with (nolock)
+cross apply 
+(
+select GETDATE() as tk 
+--ateitis
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())+1,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())+2,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())+3,0))
+--metai atgal
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())+0,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-1,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-2,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-3,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-4,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-5,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-6,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-7,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-8,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-9,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-10,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-11,0)))a
+--pirmas pardavimas
+left join
+(select 
+min(il.mpd) mpd,
+v.[Item No_]
+from "<Company Name>$Value Entry" v
+ join 
+(
+SELECT MIN([Posting Date]) as mpd ,[Item No_],min([Entry No_]) as en
+FROM <Company Name>$Item Ledger Entry]
+where [Entry Type] = 0
+group by [Item No_]
+)il on il.en = v.[Item Ledger Entry No_]
+group by
+v.[Item No_]
+)b
+on b.[Item No_] = ve.[Item No_]
+where [Item Ledger Entry Type] = 0  
+and 
+(
+case   when datediff(day,dateadd(month,-6,tk) , ve.[Posting Date]) not between 0 and DATEDIFF(day,dateadd(month,-6,tk),tk)  or DATEDIFF(day,mpd,tk) > 183 then 0 else  [Cost Posted to G_L] end <> 0 or
+case   when datediff(day,dateadd(month,-6,tk) , ve.[Posting Date]) not between 0 and DATEDIFF(day,dateadd(month,-6,tk),tk) or DATEDIFF(day,mpd,tk) > 183 then 0 else  [Invoiced Quantity] end <> 0
+)
+--pirkta prekes per 3 men
+union all
+SELECT 
+tk,
+ve.[Posting Date],
+ve.[Item No_],
+[Global Dimension 1 Code] as gd1,
+[Global Dimension 2 Code] as gd2,
+0,
+0,
+0,
+0,
+0,
+0,
+case when datediff(day,dateadd(month,-3,tk) , ve.[Posting Date]) not between 0 and DATEDIFF(day,dateadd(month,-3,tk),tk) then 0 else  [Cost Posted to G_L] end  AmountLM,
+case when datediff(day,dateadd(month,-3,tk) , ve.[Posting Date]) not between 0 and DATEDIFF(day,dateadd(month,-3,tk),tk) then 0 else  [Invoiced Quantity] end QuantityLM
+FROM "<Company Name>$Value Entry" ve with (nolock)
+cross apply 
+(
+select GETDATE() as tk 
+--ateitis
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())+1,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())+2,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())+3,0))
+--metai atgal
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())+0,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-1,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-2,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-3,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-4,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-5,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-6,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-7,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-8,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-9,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-10,0))
+union all
+SELECT DATEADD(s,-1,DATEADD(mm, DATEDIFF(m,0,GETDATE())-11,0)))a
+
+where [Item Ledger Entry Type] = 0  
+and 
+(
+case when datediff(day,dateadd(month,-3,tk) , ve.[Posting Date]) not between 0 and DATEDIFF(day,dateadd(month,-3,tk),tk) then 0 else  [Cost Posted to G_L] end <> 0 or
+case when datediff(day,dateadd(month,-3,tk) , ve.[Posting Date]) not between 0 and DATEDIFF(day,dateadd(month,-3,tk),tk) then 0 else  [Invoiced Quantity] end <> 0
+)
+
+)a
+group by 
+tk,
+[Item No_]
+
+)b
+where b.[Item No_] not in (SELECT No_
+  FROM <Company Name>$Item]
+  where [Product Group Code] in ('PALETS','DRUMS'))
