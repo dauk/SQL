@@ -1,0 +1,262 @@
+
+select 
+sum(kiekis) as kiekis,
+sum(suma)as suma,
+sum(originalisuma) as originalisuma,
+z.data as tk,
+z.sandelys,
+z.produktas,
+sen.k0030,
+sen.k3160,
+sen.k6190,
+sen.k91120,
+sen.k121150,
+sen.k151180,
+sen.k181365,
+sen.k181x,
+sen.k365x,
+sen.s0030,
+sen.s3160,
+sen.s6190,
+sen.s91120,
+sen.s121150,
+sen.s151180,
+sen.s181x,
+sen.s365x,
+sen.s181365
+--,atnesta
+ from (
+SELECT Date(ts) as Data,
+b.pdata,
+case when  pdata <= Date(ts) then b.kiekis else 0 end as kiekis,
+case when  pdata <= Date(ts) then b.suma else 0 end as suma,
+case when  pdata <= Date(ts) then b.originalisuma else 0 end as originalisuma,
+b.sandelys,
+b.produktas,
+atnesta 
+
+FROM generate_series(date(current_date - interval '6 months'), date(current_date), '1day'::interval) AS t(ts) 
+--where date(ts) <=date(current_time)
+cross join( -- cross
+select kiekis,sandelys,produktas,pdata,suma,atnesta,originalisuma from ( 
+SELECT sum(product_qty) *-1 as kiekis,case when sum(amount) = 0 then max(vntsavik) * sum(product_qty)  * -1 else sum(amount) *-1 end as suma,location_id as Sandelys,product_id as Produktas,posting_date as pdata,case when sum(amount) = 0 then 1 else 0 end as atnesta,sum(amount) *(-1) as originalisuma
+FROM stock_move m
+left join (
+SELECT 
+mx.sandelys,
+mx.preke,
+max(m.unit_cost) as vntsavik
+FROM stock_move m
+join(
+SELECT max(posting_date) as maxPD,location_id as sandelys,product_id as preke
+  FROM stock_move
+  where 
+  unit_cost <> 0
+  group by 
+  location_id,
+  product_id
+)mx
+on m.location_id = mx.sandelys
+and m.product_id = mx.preke
+and m.posting_date = mx.maxpd
+group by
+mx.sandelys,
+mx.preke
+)sa
+on sa.sandelys = m.location_id
+and sa.preke = m.product_id
+and m.posting_date  >= date(current_date - interval '2 months')
+where m.state = 'done'
+group by 
+product_id,
+location_id,
+posting_date
+------UNION-------
+union all
+SELECT sum(product_qty)  as kiekis,case when sum(amount) = 0 then max(vntsavik) * sum(product_qty) else sum(amount) end as suma,location_dest_id as Sabdelys,product_id as Produktas,posting_date as pdata,case when sum(amount) = 0 then 1 else 0 end as atnesta,sum(amount)  as originalisuma
+FROM stock_move m
+left join (
+SELECT 
+mx.sandelys,
+mx.preke,
+max(m.unit_cost) as vntsavik
+FROM stock_move m
+join(
+SELECT max(posting_date) as maxPD,location_id as sandelys,product_id as preke
+  FROM stock_move
+  where 
+  unit_cost <> 0
+  group by 
+  location_id,
+  product_id
+)mx
+on m.location_id = mx.sandelys
+and m.product_id = mx.preke
+and m.posting_date = mx.maxpd
+group by
+mx.sandelys,
+mx.preke
+)sa
+on sa.sandelys = m.location_dest_id
+and sa.preke = m.product_id
+and m.posting_date  >= date(current_date - interval '2 months')
+where m.state = 'done'
+group by 
+product_id,
+location_dest_id,
+posting_date )a
+--where produktas = 4882
+--and sandelys = 7
+
+) b
+
+)z
+left join (
+select 
+sandelys,
+produktas,
+data,
+sum(k0030) as k0030,
+sum(k3160) as k3160,
+sum(k6190) as k6190,
+sum(k91120) as k91120,
+sum(k121150) as k121150,
+sum(k151180) as k151180,
+sum(k181365) as k181365,
+sum(k181x) as k181x,
+sum(k365x) as k365x,
+sum(s0030) as s0030,
+sum(s3160) as s3160,
+sum(s6190) as s6190,
+sum(s91120) as s91120,
+sum(s121150) as s121150,
+sum(s151180) as s151180,
+sum(s181x) as s181x,
+sum(s365x) as s365x,
+sum(s181365) as s181365
+
+ from (
+SELECT 
+Date(ts) as Data,
+x.pdata,
+x.sandelys,
+x.produktas,
+sum(x.kiekis) as rezkiek,
+sum(x.suma) as suma,
+case when date_part('day',Date(ts)::timestamp-x.pdata::timestamp) between 0 and 30 then sum(x.kiekis) else 0 end as k0030,
+case when date_part('day',Date(ts)::timestamp-x.pdata::timestamp) between 31 and 60 then sum(x.kiekis) else 0 end as k3160,
+case when date_part('day',Date(ts)::timestamp-x.pdata::timestamp) between 61 and 90 then sum(x.kiekis) else 0 end as k6190,
+case when date_part('day',Date(ts)::timestamp-x.pdata::timestamp) between 91 and 120 then sum(x.kiekis) else 0 end as k91120,
+case when date_part('day',Date(ts)::timestamp-x.pdata::timestamp) between 121 and 150 then sum(x.kiekis) else 0 end as k121150,
+case when date_part('day',Date(ts)::timestamp-x.pdata::timestamp) between 151 and 180 then sum(x.kiekis) else 0 end as k151180,
+case when date_part('day',Date(ts)::timestamp-x.pdata::timestamp) between 181 and 365 then sum(x.kiekis) else 0 end as k181365,
+case when date_part('day',Date(ts)::timestamp-x.pdata::timestamp) >= 181 then sum(x.kiekis) else 0 end as k181x,
+case when date_part('day',Date(ts)::timestamp-x.pdata::timestamp) >= 366 then sum(x.kiekis) else 0 end as k365x,
+case when date_part('day',Date(ts)::timestamp-x.pdata::timestamp) between 0 and 30 then sum(x.suma) else 0 end as s0030,
+case when date_part('day',Date(ts)::timestamp-x.pdata::timestamp) between 31 and 60 then sum(x.suma) else 0 end as s3160,
+case when date_part('day',Date(ts)::timestamp-x.pdata::timestamp) between 61 and 90 then sum(x.suma) else 0 end as s6190,
+case when date_part('day',Date(ts)::timestamp-x.pdata::timestamp) between 91 and 120 then sum(x.suma) else 0 end as s91120,
+case when date_part('day',Date(ts)::timestamp-x.pdata::timestamp) between 121 and 150 then sum(x.suma) else 0 end as s121150,
+case when date_part('day',Date(ts)::timestamp-x.pdata::timestamp) between 151 and 180 then sum(x.suma) else 0 end as s151180,
+case when date_part('day',Date(ts)::timestamp-x.pdata::timestamp) between 181 and 365 then sum(x.suma) else 0 end as s181365,
+case when date_part('day',Date(ts)::timestamp-x.pdata::timestamp) >= 181 then sum(x.suma) else 0 end as s181x,
+case when date_part('day',Date(ts)::timestamp-x.pdata::timestamp) >= 366 then sum(x.suma) else 0 end as s365x
+FROM generate_series(date(current_date - interval '6 months'), date(current_date), '1day'::interval) AS t(ts) 
+--where date(ts) <=date(current_time)
+cross join( 
+select kiekis as kiekis,sandelys,produktas,pdata,suma from ( 
+SELECT product_qty  as kiekis,location_dest_id as Sandelys,product_id as Produktas,posting_date as pdata,case when amount = 0 then sa.vntsavik * product_qty else amount end as suma
+FROM stock_move m
+left join (
+SELECT 
+mx.sandelys,
+mx.preke,
+max(m.unit_cost) as vntsavik
+FROM stock_move m
+join(
+SELECT max(posting_date) as maxPD,location_id as sandelys,product_id as preke
+  FROM stock_move
+  where 
+  unit_cost <> 0
+  group by 
+  location_id,
+  product_id
+)mx
+on m.location_id = mx.sandelys
+and m.product_id = mx.preke
+and m.posting_date = mx.maxpd
+group by
+mx.sandelys,
+mx.preke
+)sa
+on sa.sandelys = m.location_dest_id
+and sa.preke = m.product_id
+and m.posting_date  >= date(current_date - interval '2 months')
+
+where m.state = 'done'
+--and type in ('in','"pos_adjustment"')
+)a
+--where a.produktas = 3630
+--and a.sandelys = 18
+)x
+group by 
+x.sandelys,
+x.produktas,
+Date(ts),
+x.pdata
+)r
+group by
+sandelys,
+produktas,
+data
+)sen
+
+on z.sandelys = sen.sandelys
+and z.data = sen.data
+and z.produktas = sen.produktas
+
+where  z.sandelys IN
+(
+SELECT 
+l.id
+FROM stock_location l
+left join stock_location l2
+on l2.id = l.location_id
+left join stock_location l3
+on l3.id = l2.location_id
+left join stock_location l4
+on l4.id = l3.location_id
+where l2.name = 'Physical Locations'
+or l3.name = 'Physical Locations'
+or l4.name = 'Physical Locations'
+)
+and z.sandelys <> 47
+
+and z.produktas not in (select id from product_product where default_code like 'GAM-%')
+
+group by 
+z.data,
+z.sandelys,
+z.produktas,
+sen.k0030,
+sen.k3160,
+sen.k6190,
+sen.k91120,
+sen.k121150,
+sen.k151180,
+sen.k181x,
+sen.k365x,
+sen.s0030,
+sen.s3160,
+sen.s6190,
+sen.s91120,
+sen.s121150,
+sen.s151180,
+sen.s181x,
+sen.s365x,
+sen.s181365,
+sen.k181365
+--,atnesta
+having
+sum(kiekis) <> 0
+or sum(suma) <> 0;
