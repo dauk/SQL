@@ -1,5 +1,5 @@
 # SQL
-SQL queries 
+## SQL queries 
 
 **MSSQL**
 -Name: POS (Provision On Stock)
@@ -8,5 +8,5 @@ SQL queries
 
 **PostgreSQL**
 -Name: OpenERP Stock
--System: OpemERP
+-System: OpemERP  
 -Result: Get's stock information by day for each product for each warehouse, can be extended to add ageing.
