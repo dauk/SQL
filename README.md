@@ -8,5 +8,5 @@
 
 **PostgreSQL**  
 -Name: OpenERP Stock  
--System: OpemERP  
+-System: OpenERP  
 -Result: Get's stock information by day for each product for each warehouse, can be extended to add ageing.
